@@ -42,5 +42,7 @@ To run the app, spin up an HTTP server at any port and visit
 
 
 ## Credit
-App design and templates from: <https://github.com/tastejs/todomvc/tree/master/template>
-This TodoMVC application was created by [crodjer](https://github.com/crodjer/).
+
+ - [Haste compiler](https://github.com/valderman/haste-compiler)
+ - App design and templates from: <https://github.com/tastejs/todomvc/tree/master/template>
+ - This TodoMVC application was created by [crodjer](https://github.com/crodjer/).
