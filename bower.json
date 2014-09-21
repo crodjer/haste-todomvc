@@ -1,0 +1,7 @@
+{
+	"name": "todomvc-haste",
+	"version": "0.0.1",
+	"dependencies": {
+		"todomvc-common": "~0.1.4"
+	}
+}
