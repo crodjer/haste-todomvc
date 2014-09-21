@@ -7,9 +7,18 @@ import Haste
 import Haste.Concurrent
 import Data.Todo
 
+-- | Get the template string from HTML source.
 todoTemplate :: CIO String
 todoTemplate = withElem "template-todo" ((flip getProp) "innerHTML")
 
+-- | Update the Todo list to new one. Questionable design.
+updateTodos :: MVar TodoList -> TodoList -> CIO ()
+updateTodos tmv tl = do
+  putMVar tmv tl
+  -- Write to localstorage too in future. For now, updateTodos is pretty much
+  -- same as putMVar.
+
+-- | Set contents for a Todo Elem based on the Todo instance.
 setElTodo :: Todo -> Elem -> CIO Elem
 setElTodo todo li = do
   withQuerySelectorElem li "label" setLabel
@@ -24,10 +33,11 @@ setElTodo todo li = do
       -- isn't available.
       True -> setProp el "checked" "true"
       _    -> setProp el "checked" ""
-    setEditValue el = setAttr el "value" task'
+    setEditValue el = setProp el "value" task'
     task' = task todo
     completed' = completed todo
 
+-- | Create a new Todo DOM element based on the Todo instance.
 newTodoEl :: Todo -> CIO Elem
 newTodoEl todo = do
   wrapperEl <- newElem "div"
@@ -36,6 +46,7 @@ newTodoEl todo = do
   el <- withQuerySelectorElem wrapperEl "li" (setElTodo todo)
   return el
 
+-- | Render the actual todo list.
 renderTodoList :: TodoList -> Elem -> CIO ()
 renderTodoList todos ul = do
   _ <- withQuerySelectorElems ul "li" $ mapM $ (flip removeChild) ul
@@ -47,6 +58,7 @@ renderTodoList todos ul = do
       todoEl <- newTodoEl todo
       addChild todoEl ul
 
+-- | Render and properly highlight App filters based on hash
 renderFilters :: String -> CIO ()
 renderFilters hash = do
   _ <- withQuerySelectorElems document "#filters li a" (mapM setHighlight)
@@ -57,33 +69,60 @@ renderFilters hash = do
       mhref <- getAttr el "href"
       setClass el "selected" $ '#':hash == mhref
 
-renderApp :: String -> MVar TodoList -> CIO ()
-renderApp hash tmv = do
-  todos <- readMVar tmv
-  let active = activeTodos todos
-  let done = completedTodos todos
+
+-- Render the application: Render todo items based on path and render list
+-- overview status.
+renderApp :: TodoList -> CIO ()
+renderApp todos = do
+  hash <- getHash
   renderFilters hash
-  withQuerySelectorElem document "#todo-count strong" (setActiveCount active)
-  withQuerySelectorElem document "#clear-completed" (resetClearCompleted done)
-  withElem "todo-list" (renderTodoList $ currentTodos todos)
+  withQuerySelectorElem document "#todo-count strong" (setActiveCount)
+  withQuerySelectorElem document "#clear-completed" (resetClearCompleted)
+  withElem "todo-list" (renderTodoList $ currentTodos hash)
   return ()
 
   where
-    currentTodos todos
-      | hash == "/active"    = activeTodos todos
-      | hash == "/completed" = completedTodos todos
+    currentTodos hash
+      | hash == "/active"    = active
+      | hash == "/completed" = done
       | otherwise            = todos
 
-    setActiveCount active el = setProp el "innerHTML" $ show $ length active
-    resetClearCompleted done el = setProp el "innerHTML" (clearCompletedText done)
-    clearCompletedText done = "Clear completed (" ++ (show $ length done) ++ ")"
+    setActiveCount el = setProp el "innerHTML" $ show $ length active
+    resetClearCompleted el = setProp el "innerHTML" (clearCompletedText)
+    clearCompletedText = "Clear completed (" ++ (show $ length done) ++ ")"
+    active = activeTodos todos
+    done = completedTodos todos
 
-initializeApp :: MVar TodoList -> CIO ()
-initializeApp todosMVar = do
-  hash <- getHash
-  renderApp hash todosMVar
+-- | Manage the new todo input textbox related events. This is currently
+-- broken.
+manageNewTodo :: MVar TodoList -> Elem -> CIO ()
+manageNewTodo tmv el = onEvent el OnKeyUp handleNewTodo >> focus el
+  where
+    createNewTodo value = concurrent $ do
+      setProp el "value" ""
+      todos <- (Todo {task=value, completed=False}:) `fmap` (readMVar tmv)
+      updateTodos tmv todos
+      renderApp todos
+    handleNewTodo k = do
+      value <- getProp el "value"
+      if k == 13 && length value > 0
+        then createNewTodo value
+        else return ()
+
+-- | Setup initial DOM events.
+setupEvents :: MVar TodoList -> CIO ()
+setupEvents tmv = do
+  withElem "new-todo" (manageNewTodo tmv)
   onHashChange onHashChangeHandler
 
   where
-    onHashChangeHandler _ hash = do
-      renderApp hash todosMVar
+    onHashChangeHandler _ _ = do
+      todos <- readMVar tmv
+      renderApp todos
+
+-- | Initialize the Todo App: Setup events and do the first render.
+initializeApp :: MVar TodoList -> CIO ()
+initializeApp todosMVar = do
+  todos <- readMVar todosMVar
+  setupEvents todosMVar
+  renderApp todos
