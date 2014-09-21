@@ -3,4 +3,4 @@ import Haste
 import Data.Todo
 
 main :: IO ()
-main = writeLog "Hello World!"
+main = writeLog $ show $ addTodo (Todo {task="Say Hello", completed=False}) []
