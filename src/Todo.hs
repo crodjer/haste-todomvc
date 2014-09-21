@@ -20,4 +20,4 @@ testTodos = [ Todo { task="A task out of fixtures."
 
 
 main :: IO ()
-main = withElem "todo-list" (renderTodoList testTodos)
+main = renderApp testTodos "#/"

@@ -1,5 +1,5 @@
 module Todo.DOM (
-  renderTodoList
+  renderApp
   ) where
 
 
@@ -39,13 +39,25 @@ renderTodoList :: TodoList -> Elem -> IO ()
 renderTodoList todos ul = do
   _ <- withQuerySelectorElems ul "li" $ mapM $ (flip removeChild) ul
   _ <- mapM addTask todos
-  withQuerySelectorElem document "#todo-count strong" setActiveCount
-  withQuerySelectorElem document "#clear-completed" resetClearCompleted
   return ()
+
   where
     addTask todo = do
       todoEl <- newTodoEl todo
       addChild todoEl ul
+
+renderApp :: TodoList -> String -> IO ()
+renderApp todos route = do
+  withQuerySelectorElem document "#todo-count strong" setActiveCount
+  withQuerySelectorElem document "#clear-completed" resetClearCompleted
+  withElem "todo-list" (renderTodoList currentTodos)
+
+  where
+    currentTodos = case route of
+      "#/active"    -> active
+      "#/completed" -> done
+      _             -> todos
+
     setActiveCount el = setProp el "innerHTML" $ show $ length active
     resetClearCompleted el = setProp el "innerHTML" clearCompletedText
     clearCompletedText = "Clear completed (" ++ (show $ length done) ++ ")"
