@@ -1,6 +1,8 @@
 module Data.Todo (
   Todo(..),
   TodoList,
+  activeTodos,
+  completedTodos,
   addTodo,
   updateTodo,
   removeTodo
@@ -13,7 +15,7 @@ data Todo = Todo { task :: String
 type TodoList = [Todo]
 
 addTodo :: Todo -> TodoList -> TodoList
-addTodo t = (++ [t])
+addTodo = (:)
 
 removeTodo ::Todo -> TodoList -> TodoList
 removeTodo t  = filter (/= t)
@@ -23,3 +25,9 @@ updateTodo t f tl = map update tl where
   update ti
     | ti == t    = f t
     | otherwise  = t
+
+activeTodos :: TodoList -> TodoList
+activeTodos = filter (not . completed)
+
+completedTodos :: TodoList -> TodoList
+completedTodos = filter completed
