@@ -101,6 +101,8 @@ manageNewTodo tmv el = onEvent el OnKeyUp handleNewTodo >> focus el
     createNewTodo value = concurrent $ do
       setProp el "value" ""
       todos <- (Todo {task=value, completed=False}:) `fmap` (readMVar tmv)
+      -- TODO: This needs to be revised. My current concepts about MVar are
+      -- wrong.
       updateTodos tmv todos
       renderApp todos
     handleNewTodo k = do
