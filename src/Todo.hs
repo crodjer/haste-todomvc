@@ -1,4 +1,5 @@
 import Haste
+import Haste.Concurrent
 
 import Data.Todo
 import Todo.DOM
@@ -20,4 +21,6 @@ testTodos = [ Todo { task="A task out of fixtures."
 
 
 main :: IO ()
-main = initializeApp testTodos
+main = concurrent $ do
+  todos <- newMVar testTodos
+  initializeApp todos

@@ -4,12 +4,13 @@ module Todo.DOM (
 
 
 import Haste
+import Haste.Concurrent
 import Data.Todo
 
-todoTemplate :: IO String
+todoTemplate :: CIO String
 todoTemplate = withElem "template-todo" ((flip getProp) "innerHTML")
 
-setElTodo :: Todo -> Elem -> IO Elem
+setElTodo :: Todo -> Elem -> CIO Elem
 setElTodo todo li = do
   withQuerySelectorElem li "label" setLabel
   withQuerySelectorElem li ".toggle" setChecked
@@ -27,7 +28,7 @@ setElTodo todo li = do
     task' = task todo
     completed' = completed todo
 
-newTodoEl :: Todo -> IO Elem
+newTodoEl :: Todo -> CIO Elem
 newTodoEl todo = do
   wrapperEl <- newElem "div"
   template <- todoTemplate
@@ -35,7 +36,7 @@ newTodoEl todo = do
   el <- withQuerySelectorElem wrapperEl "li" (setElTodo todo)
   return el
 
-renderTodoList :: TodoList -> Elem -> IO ()
+renderTodoList :: TodoList -> Elem -> CIO ()
 renderTodoList todos ul = do
   _ <- withQuerySelectorElems ul "li" $ mapM $ (flip removeChild) ul
   _ <- mapM addTask todos
@@ -46,7 +47,7 @@ renderTodoList todos ul = do
       todoEl <- newTodoEl todo
       addChild todoEl ul
 
-renderFilters :: String -> IO ()
+renderFilters :: String -> CIO ()
 renderFilters hash = do
   _ <- withQuerySelectorElems document "#filters li a" (mapM setHighlight)
   return ()
@@ -56,33 +57,33 @@ renderFilters hash = do
       mhref <- getAttr el "href"
       setClass el "selected" $ '#':hash == mhref
 
-renderApp :: String -> TodoList -> IO ()
-renderApp hash todos = do
+renderApp :: String -> MVar TodoList -> CIO ()
+renderApp hash tmv = do
+  todos <- readMVar tmv
+  let active = activeTodos todos
+  let done = completedTodos todos
   renderFilters hash
-  withQuerySelectorElem document "#todo-count strong" setActiveCount
-  withQuerySelectorElem document "#clear-completed" resetClearCompleted
-  withElem "todo-list" (renderTodoList currentTodos)
+  withQuerySelectorElem document "#todo-count strong" (setActiveCount active)
+  withQuerySelectorElem document "#clear-completed" (resetClearCompleted done)
+  withElem "todo-list" (renderTodoList $ currentTodos todos)
   return ()
 
   where
-    currentTodos
-      | hash == "/active"    = active
-      | hash == "/completed" = done
+    currentTodos todos
+      | hash == "/active"    = activeTodos todos
+      | hash == "/completed" = completedTodos todos
       | otherwise            = todos
 
-    setActiveCount el = setProp el "innerHTML" $ show $ length active
-    resetClearCompleted el = setProp el "innerHTML" clearCompletedText
-    clearCompletedText = "Clear completed (" ++ (show $ length done) ++ ")"
+    setActiveCount active el = setProp el "innerHTML" $ show $ length active
+    resetClearCompleted done el = setProp el "innerHTML" (clearCompletedText done)
+    clearCompletedText done = "Clear completed (" ++ (show $ length done) ++ ")"
 
-    done = completedTodos todos
-    active = activeTodos todos
-
-initializeApp :: TodoList -> IO ()
-initializeApp todos = do
+initializeApp :: MVar TodoList -> CIO ()
+initializeApp todosMVar = do
   hash <- getHash
-  renderApp hash todos
+  renderApp hash todosMVar
   onHashChange onHashChangeHandler
 
   where
     onHashChangeHandler _ hash = do
-      renderApp hash todos
+      renderApp hash todosMVar
