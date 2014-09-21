@@ -20,4 +20,4 @@ testTodos = [ Todo { task="A task out of fixtures."
 
 
 main :: IO ()
-main = renderApp testTodos "#/"
+main = initializeApp testTodos
