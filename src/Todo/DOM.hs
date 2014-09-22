@@ -99,7 +99,7 @@ renderApp tmv = do
       done   = completedTodos todos
   renderFilters hash
 
-  withElems ["toggle-all", "footer"] (mapM_  (setHidden $ todos == []))
+  withElems ["main", "footer"] (mapM_  (setHidden $ todos == []))
   withQuerySelectorElem document "#todo-count" (setActiveCount $ length active)
   withQuerySelectorElem document "#clear-completed" (resetClearCompleted $ length done)
   withElem "todo-list" (renderTodoList tmv $ currentTodos todos hash)
