@@ -30,16 +30,16 @@ instead, most of the application logic lies in `src` directory:
 
 
 ## Running
-The app should run directly. But to make changes you'll need to have
-haste-compiler installed (`hastec` available in your PATH). To build run: `make`
+
+A recently built app will be available on the branch `gh-pages`.  To run the
+app, spin up an HTTP server at any port and visit `http://localhost:port/`.
+
+To make changes you'll need to have haste-compiler installed (`hastec` available
+in your PATH). To build run: `make`
 
 > Currently, there are a couple of patches that I need which are not merged
 > yet. So, it will only function correctly with
 > [my fork](https://github.com/crodjer/haste-compiler/) for now.
-
-To run the app, spin up an HTTP server at any port and visit
-`http://localhost:port/`.
-
 
 ## Credit
 

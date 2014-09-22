@@ -1,5 +1,8 @@
 *.hi
 *.o
+tmp
+bower_components
+js/app.js
 src/main
 .cabal-sandbox
 cabal.sandbox.config
