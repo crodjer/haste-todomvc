@@ -21,12 +21,15 @@ Here are some links you may find helpful:
 ## Implementation
 
 How is the app structured? Are there deviations from the spec? If so, why?
-Since this is not a conventional JavaScript application and an Haskell one
-instead, most of the application logic lies in `src` directory:
+Since this is not a conventional JavaScript application and but is written in
+Haskell instead. The application logic likes in `src` directory.
 
   - `src/Data/Todo.hs`: Defines the relevant data structures.
   - `src/Todo/DOM.hs`: Defines DOM interactions and most of the business logic.
   - `src/Todo.hs`: Initializes the application.
+
+Currently, out of MVC we don't really emulate a `C` but just `M` and `V`. `V`
+has the logic of controller, router and view are all tangled in `DOM.hs`.
 
 
 ## Running

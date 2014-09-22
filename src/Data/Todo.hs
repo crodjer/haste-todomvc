@@ -11,12 +11,21 @@ module Data.Todo (
   removeTodo
   ) where
 
+import Haste.Prim
+import Haste.JSON
+import Haste.Serialize
+
 data Todo = Todo { identifier :: Integer
                  , task :: String
                  , completed :: Bool }
-          deriving (Eq, Show)
+          deriving (Eq, Show, Read)
 
 type TodoList = [Todo]
+
+instance Serialize Todo where
+  toJSON = Str . toJSStr . show
+  parseJSON (Str s) = (read . fromJSStr) `fmap` return s
+  parseJSON _  = error "Tried to parse a non Todo instance as Todo"
 
 addTodo :: String -> Bool -> TodoList -> TodoList
 addTodo t c ts = (newTodo:ts)
