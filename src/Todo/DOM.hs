@@ -120,8 +120,7 @@ manageNewTodo :: MVar TodoList -> Elem -> CIO ()
 manageNewTodo tmv el = onEvent el OnKeyUp handleNewTodo >> focus el
   where
     createNewTodo value = concurrent $ do
-      let todo = Todo {task=value, completed=False}
-      (todo:) `fmap` (takeMVar tmv) >>= storeTodos tmv
+      (addTodo value False) `fmap` (takeMVar tmv) >>= storeTodos tmv
       setProp el "value" ""
       renderApp tmv
     handleNewTodo k = do

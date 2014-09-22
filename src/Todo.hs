@@ -4,16 +4,20 @@ import Data.Todo
 import Todo.DOM
 
 testTodos :: TodoList
-testTodos = [ Todo { task="A task out of fixtures."
+testTodos = [ Todo { identifier=1
+                   , task="A task out of fixtures."
                    , completed=False
                    }
-            , Todo { task="Another task out of fixtures!"
+            , Todo { identifier=2
+                   , task="Another task out of fixtures!"
                    , completed=False
                    }
-            , Todo { task="A completed task out of fixtures!"
+            , Todo { identifier=3
+                   , task="A completed task out of fixtures!"
                    , completed=True
                    }
-            , Todo { task="Support dynamically generated tasks."
+            , Todo { identifier=4
+                   , task="Support dynamically generated tasks."
                    , completed=True
                    }
             ]

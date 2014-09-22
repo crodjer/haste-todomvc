@@ -10,14 +10,22 @@ module Data.Todo (
   removeTodo
   ) where
 
-data Todo = Todo { task :: String
+data Todo = Todo { identifier :: Integer
+                 , task :: String
                  , completed :: Bool }
           deriving (Eq, Show)
 
 type TodoList = [Todo]
 
-addTodo :: Todo -> TodoList -> TodoList
-addTodo = (:)
+addTodo :: String -> Bool -> TodoList -> TodoList
+addTodo t c ts = (newTodo:ts)
+ where
+   nextId = if length ts == 0 then 1
+            else (maximum $ map identifier ts) + 1
+   newTodo = Todo { identifier = nextId
+                  , task = t
+                  , completed = c
+                  }
 
 removeTodo ::Todo -> TodoList -> TodoList
 removeTodo t  = filter (/= t)
