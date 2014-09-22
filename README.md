@@ -15,7 +15,7 @@ The [Haste Website](http://haste-lang.org/) is a great resource for getting star
 Here are some links you may find helpful:
 
 * [Documentation](http://haste-lang.org/#docs)
-* [API Reference](hackage.haskell.org/package/haste-compiler)
+* [API Reference](http://hackage.haskell.org/package/haste-compiler)
 * [Haste on GitHub](https://github.com/valderman/haste-compiler)
 
 ## Implementation
