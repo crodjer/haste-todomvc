@@ -11,7 +11,7 @@ import Data.Todo
 todoTemplate :: CIO String
 todoTemplate = withElem "template-todo" ((flip getProp) "innerHTML")
 
--- | Update the Todo list to new one. Questionable design.
+-- | Update the Todo list to new one.
 updateTodos :: MVar TodoList -> TodoList -> CIO ()
 updateTodos tmv tl = do
   putMVar tmv tl
@@ -93,18 +93,18 @@ renderApp todos = do
     active = activeTodos todos
     done = completedTodos todos
 
--- | Manage the new todo input textbox related events. This is currently
--- broken.
+renderAppM :: MVar TodoList -> CIO()
+renderAppM tmv = readMVar tmv >>= renderApp
+
+-- | Manage the new todo input textbox related events.
 manageNewTodo :: MVar TodoList -> Elem -> CIO ()
 manageNewTodo tmv el = onEvent el OnKeyUp handleNewTodo >> focus el
   where
     createNewTodo value = concurrent $ do
+      let todo = Todo {task=value, completed=False}
+      (todo:) `fmap` (takeMVar tmv) >>= updateTodos tmv
       setProp el "value" ""
-      todos <- (Todo {task=value, completed=False}:) `fmap` (readMVar tmv)
-      -- TODO: This needs to be revised. My current concepts about MVar are
-      -- wrong.
-      updateTodos tmv todos
-      renderApp todos
+      renderAppM tmv
     handleNewTodo k = do
       value <- getProp el "value"
       if k == 13 && length value > 0
@@ -119,12 +119,10 @@ setupEvents tmv = do
 
   where
     onHashChangeHandler _ _ = do
-      todos <- readMVar tmv
-      renderApp todos
+      renderAppM tmv
 
 -- | Initialize the Todo App: Setup events and do the first render.
 initializeApp :: MVar TodoList -> CIO ()
 initializeApp todosMVar = do
-  todos <- readMVar todosMVar
+  renderAppM todosMVar
   setupEvents todosMVar
-  renderApp todos

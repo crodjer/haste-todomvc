@@ -1,4 +1,3 @@
-import Haste
 import Haste.Concurrent
 
 import Data.Todo
