@@ -72,29 +72,27 @@ renderFilters hash = do
 
 -- Render the application: Render todo items based on path and render list
 -- overview status.
-renderApp :: TodoList -> CIO ()
-renderApp todos = do
+renderApp :: MVar TodoList -> CIO ()
+renderApp tmv = do
+  todos <- readMVar tmv
   hash <- getHash
+  let active = activeTodos todos
+      done   = completedTodos todos
   renderFilters hash
-  withQuerySelectorElem document "#todo-count strong" (setActiveCount)
-  withQuerySelectorElem document "#clear-completed" (resetClearCompleted)
-  withElem "todo-list" (renderTodoList $ currentTodos hash)
+  withQuerySelectorElem document "#todo-count strong" (setActiveCount active)
+  withQuerySelectorElem document "#clear-completed" (resetClearCompleted done)
+  withElem "todo-list" (renderTodoList $ currentTodos todos hash)
   return ()
 
   where
-    currentTodos hash
-      | hash == "/active"    = active
-      | hash == "/completed" = done
+    currentTodos todos hash
+      | hash == "/active"    = activeTodos todos
+      | hash == "/completed" = completedTodos todos
       | otherwise            = todos
 
-    setActiveCount el = setProp el "innerHTML" $ show $ length active
-    resetClearCompleted el = setProp el "innerHTML" (clearCompletedText)
-    clearCompletedText = "Clear completed (" ++ (show $ length done) ++ ")"
-    active = activeTodos todos
-    done = completedTodos todos
-
-renderAppM :: MVar TodoList -> CIO()
-renderAppM tmv = readMVar tmv >>= renderApp
+    setActiveCount ac el = setProp el "innerHTML" $ show $ length ac
+    resetClearCompleted dn el = setProp el "innerHTML" (clearCompletedText dn)
+    clearCompletedText dn = "Clear completed (" ++ (show $ length dn) ++ ")"
 
 -- | Manage the new todo input textbox related events.
 manageNewTodo :: MVar TodoList -> Elem -> CIO ()
@@ -104,7 +102,7 @@ manageNewTodo tmv el = onEvent el OnKeyUp handleNewTodo >> focus el
       let todo = Todo {task=value, completed=False}
       (todo:) `fmap` (takeMVar tmv) >>= storeTodos tmv
       setProp el "value" ""
-      renderAppM tmv
+      renderApp tmv
     handleNewTodo k = do
       value <- getProp el "value"
       if k == 13 && length value > 0
@@ -119,10 +117,10 @@ setupEvents tmv = do
 
   where
     onHashChangeHandler _ _ = do
-      renderAppM tmv
+      renderApp tmv
 
 -- | Initialize the Todo App: Setup events and do the first render.
 initializeApp :: MVar TodoList -> CIO ()
 initializeApp todosMVar = do
-  renderAppM todosMVar
+  renderApp todosMVar
   setupEvents todosMVar
