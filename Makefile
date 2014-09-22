@@ -15,7 +15,7 @@ deploy:
 
 watch:
 	# Watchman: https://github.com/crodjer/watchman
-	watchman Makefile src/Todo.hs src/**/*.hs -- make todo
+	watchman Makefile src/Todo.hs src/**/*.hs -- make
 
 server:
 	python -mhttp.server 9001
