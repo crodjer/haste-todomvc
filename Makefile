@@ -3,7 +3,7 @@ app:
 
 deploy:
 	git checkout gh-pages
-	git merge master
+	git merge master --no-edit
 	make
 	git add js
 	cp -r bower_components js/app.js tmp
