@@ -2,7 +2,6 @@ module Todo.DOM (
   initializeApp
   ) where
 
-
 import Haste
 import Haste.Concurrent
 import Data.Todo
@@ -171,7 +170,8 @@ setupEvents tmv = do
       renderApp tmv
 
 -- | Initialize the Todo App: Setup events and do the first render.
-initializeApp :: MVar TodoList -> CIO ()
-initializeApp todosMVar = do
+initializeApp :: CIO ()
+initializeApp = do
+  todosMVar <- newMVar []
   renderApp todosMVar
   setupEvents todosMVar
