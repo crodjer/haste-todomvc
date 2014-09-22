@@ -12,10 +12,10 @@ todoTemplate :: CIO String
 todoTemplate = withElem "template-todo" ((flip getProp) "innerHTML")
 
 -- | Update the Todo list to new one.
-updateTodos :: MVar TodoList -> TodoList -> CIO ()
-updateTodos tmv tl = do
+storeTodos :: MVar TodoList -> TodoList -> CIO ()
+storeTodos tmv tl = do
   putMVar tmv tl
-  -- Write to localstorage too in future. For now, updateTodos is pretty much
+  -- Write to localstorage too in future. For now, storeTodos is pretty much
   -- same as putMVar.
 
 -- | Set contents for a Todo Elem based on the Todo instance.
@@ -102,7 +102,7 @@ manageNewTodo tmv el = onEvent el OnKeyUp handleNewTodo >> focus el
   where
     createNewTodo value = concurrent $ do
       let todo = Todo {task=value, completed=False}
-      (todo:) `fmap` (takeMVar tmv) >>= updateTodos tmv
+      (todo:) `fmap` (takeMVar tmv) >>= storeTodos tmv
       setProp el "value" ""
       renderAppM tmv
     handleNewTodo k = do
