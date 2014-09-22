@@ -11,6 +11,10 @@ import Data.Todo
 todoTemplate :: CIO String
 todoTemplate = withElem "template-todo" ((flip getProp) "innerHTML")
 
+mkCheckedProp :: Bool -> String
+mkCheckedProp True  = "true"
+mkCheckedProp False = ""
+
 -- | Update the Todo list to new one.
 storeTodos :: MVar TodoList -> TodoList -> CIO ()
 storeTodos tmv tl = do
@@ -28,11 +32,7 @@ setElTodo todo li = do
   return li
   where
     setLabel el = setProp el "innerHTML" task'
-    setChecked el = case completed' of
-      -- TODO: Should be able to use setAttr and removeAttr. API for removeAttr
-      -- isn't available.
-      True -> setProp el "checked" "true"
-      _    -> setProp el "checked" ""
+    setChecked el = setProp el "checked" (mkCheckedProp completed')
     setEditValue el = setProp el "value" task'
     task' = task todo
     completed' = completed todo
@@ -50,18 +50,23 @@ newTodoEl tmv todo = do
   return li
 
   where
-    registerUpdate li el = onEvent el OnKeyUp (handleTaskUpdate li el)
+    registerUpdate li el = onEvent el OnKeyUp (handleEnterUpdate li el)
+                           >> onEvent el OnBlur (doTaskUpdate li el)
     toggleDone el = onEvent el OnClick handleToggleDone
 
-    handleDoubleClick li _ _ = do
-      setClass li "editing" True
-    handleTaskUpdate li el 13 = concurrent $ do
+    doTaskUpdate li el = concurrent $ do
       task' <- getProp el "value"
       let updater = updateTodo todo (mkTaskUpdater task')
       updater `fmap` takeMVar tmv >>= storeTodos tmv
       withQuerySelectorElem li "label" (\l -> setProp l "innerHTML" $ task')
       setClass li "editing" False
-    handleTaskUpdate _ _ _ = return ()
+
+    handleDoubleClick li _ _ = do
+      setClass li "editing" True
+      withQuerySelectorElem li ".edit" focus
+
+    handleEnterUpdate li el 13 = doTaskUpdate li el
+    handleEnterUpdate _ _ _ = return ()
 
     handleToggleDone _ _ = concurrent $ do
       updateTodo todo toggleCompleted `fmap` takeMVar tmv >>= storeTodos tmv
@@ -100,20 +105,29 @@ renderApp tmv = do
   let active = activeTodos todos
       done   = completedTodos todos
   renderFilters hash
-  withQuerySelectorElem document "#todo-count strong" (setActiveCount active)
-  withQuerySelectorElem document "#clear-completed" (resetClearCompleted done)
+
+  withElems ["toggle-all", "footer"] (mapM_  (setHidden $ todos == []))
+  withQuerySelectorElem document "#todo-count" (setActiveCount $ length active)
+  withQuerySelectorElem document "#clear-completed" (resetClearCompleted $ length done)
   withElem "todo-list" (renderTodoList tmv $ currentTodos todos hash)
+  withElem "toggle-all" $ setToggleAllState (active == [])
   return ()
 
   where
+    setHidden status el = setClass el "hidden" status
     currentTodos todos hash
       | hash == "/active"    = activeTodos todos
       | hash == "/completed" = completedTodos todos
       | otherwise            = todos
 
-    setActiveCount ac el = setProp el "innerHTML" $ show $ length ac
-    resetClearCompleted dn el = setProp el "innerHTML" (clearCompletedText dn)
-    clearCompletedText dn = "Clear completed (" ++ (show $ length dn) ++ ")"
+    setActiveCount len el = do
+      setHidden (len == 0) el
+      let iStr = if len == 1 then "item" else "items"
+      setProp el "innerHTML" $ "<strong>" ++ (show len) ++ "</strong> " ++ iStr
+    resetClearCompleted len el = do
+      setHidden (len == 0) el
+      setProp el "innerHTML" ("Clear completed (" ++ (show len) ++ ")")
+    setToggleAllState st el = setProp el "checked" $ mkCheckedProp  st
 
 -- | Manage the new todo input textbox related events.
 manageNewTodo :: MVar TodoList -> Elem -> CIO ()
@@ -129,10 +143,27 @@ manageNewTodo tmv el = onEvent el OnKeyUp handleNewTodo >> focus el
         then createNewTodo value
         else return ()
 
+manageToggleAll :: MVar TodoList -> Elem -> CIO ()
+manageToggleAll tmv el = onEvent el OnClick handleToggleAll >> return ()
+  where
+    handleToggleAll _ _  = concurrent $ do
+      checked <- (== "true") `fmap` getProp el "checked"
+      (map $ setCompleted checked) `fmap` (takeMVar tmv) >>= storeTodos tmv
+      renderApp tmv
+
+manageClearCompleted :: MVar TodoList -> Elem -> CIO ()
+manageClearCompleted tmv el = onEvent el OnClick handleClear >> return ()
+  where
+    handleClear _ _ = concurrent $ do
+      activeTodos `fmap` takeMVar tmv >>= storeTodos tmv
+      renderApp tmv
+
 -- | Setup initial DOM events.
 setupEvents :: MVar TodoList -> CIO ()
 setupEvents tmv = do
   withElem "new-todo" (manageNewTodo tmv)
+  withElem "toggle-all" (manageToggleAll tmv)
+  withElem "clear-completed" (manageClearCompleted tmv)
   onHashChange onHashChangeHandler
 
   where

@@ -5,6 +5,7 @@ module Data.Todo (
   completedTodos,
   addTodo,
   mkTaskUpdater,
+  setCompleted,
   toggleCompleted,
   updateTodo,
   removeTodo
@@ -32,6 +33,9 @@ removeTodo t  = filter (/= t)
 
 mkTaskUpdater :: String -> (Todo -> Todo)
 mkTaskUpdater s todo = todo {task = s}
+
+setCompleted :: Bool -> Todo -> Todo
+setCompleted state t = t {completed = state}
 
 toggleCompleted :: Todo -> Todo
 toggleCompleted todo = todo {completed = not $ completed todo}
