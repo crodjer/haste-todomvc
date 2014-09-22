@@ -38,24 +38,45 @@ setElTodo todo li = do
     completed' = completed todo
 
 -- | Create a new Todo DOM element based on the Todo instance.
-newTodoEl :: Todo -> CIO Elem
-newTodoEl todo = do
+newTodoEl :: MVar TodoList -> Todo  -> CIO Elem
+newTodoEl tmv todo = do
   wrapperEl <- newElem "div"
   template <- todoTemplate
   setProp wrapperEl "innerHTML" (template)
-  el <- withQuerySelectorElem wrapperEl "li" (setElTodo todo)
-  return el
+  li <- withQuerySelectorElem wrapperEl "li" (setElTodo todo)
+  _  <- onEvent li OnDblClick (handleDoubleClick li)
+  _  <- withQuerySelectorElem li ".edit" (registerUpdate li)
+  _  <- withQuerySelectorElem li ".toggle" toggleDone
+  return li
+
+  where
+    registerUpdate li el = onEvent el OnKeyUp (handleTaskUpdate li el)
+    toggleDone el = onEvent el OnClick handleToggleDone
+
+    handleDoubleClick li _ _ = do
+      setClass li "editing" True
+    handleTaskUpdate li el 13 = concurrent $ do
+      task' <- getProp el "value"
+      let updater = updateTodo todo (mkTaskUpdater task')
+      updater `fmap` takeMVar tmv >>= storeTodos tmv
+      withQuerySelectorElem li "label" (\l -> setProp l "innerHTML" $ task')
+      setClass li "editing" False
+    handleTaskUpdate _ _ _ = return ()
+
+    handleToggleDone _ _ = concurrent $ do
+      updateTodo todo toggleCompleted `fmap` takeMVar tmv >>= storeTodos tmv
+      renderApp tmv
 
 -- | Render the actual todo list.
-renderTodoList :: TodoList -> Elem -> CIO ()
-renderTodoList todos ul = do
+renderTodoList :: MVar TodoList -> TodoList -> Elem -> CIO ()
+renderTodoList tmv rTodo ul = do
   _ <- withQuerySelectorElems ul "li" $ mapM $ (flip removeChild) ul
-  _ <- mapM addTask todos
+  _ <- mapM addTask rTodo
   return ()
 
   where
     addTask todo = do
-      todoEl <- newTodoEl todo
+      todoEl <- newTodoEl tmv todo
       addChild todoEl ul
 
 -- | Render and properly highlight App filters based on hash
@@ -81,7 +102,7 @@ renderApp tmv = do
   renderFilters hash
   withQuerySelectorElem document "#todo-count strong" (setActiveCount active)
   withQuerySelectorElem document "#clear-completed" (resetClearCompleted done)
-  withElem "todo-list" (renderTodoList $ currentTodos todos hash)
+  withElem "todo-list" (renderTodoList tmv $ currentTodos todos hash)
   return ()
 
   where
