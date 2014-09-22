@@ -3,6 +3,7 @@ module Todo.DOM (
   ) where
 
 import Haste
+import Haste.LocalStorage
 import Haste.Concurrent
 import Data.Todo
 
@@ -13,13 +14,6 @@ todoTemplate = withElem "template-todo" ((flip getProp) "innerHTML")
 mkCheckedProp :: Bool -> String
 mkCheckedProp True  = "true"
 mkCheckedProp False = ""
-
--- | Update the Todo list to new one.
-storeTodos :: MVar TodoList -> TodoList -> CIO ()
-storeTodos tmv tl = do
-  putMVar tmv tl
-  -- Write to localstorage too in future. For now, storeTodos is pretty much
-  -- same as putMVar.
 
 -- | Set contents for a Todo Elem based on the Todo instance.
 setElTodo :: Todo -> Elem -> CIO Elem
@@ -169,9 +163,27 @@ setupEvents tmv = do
     onHashChangeHandler _ _ = do
       renderApp tmv
 
+-- | Update the Todo list to new one.
+storeTodos :: MVar TodoList -> TodoList -> CIO ()
+storeTodos tmv tl = do
+  putMVar tmv tl
+  writeToStorage tl
+
+writeToStorage :: TodoList -> CIO ()
+writeToStorage todos = do
+  liftIO $ setItem "todos" todos
+
+loadFromStorage :: CIO TodoList
+loadFromStorage = do
+  eTodos <- liftIO $ getItem "todos"
+  return $ case eTodos of
+    Right todos  -> todos
+    Left _       -> []
+
 -- | Initialize the Todo App: Setup events and do the first render.
 initializeApp :: CIO ()
 initializeApp = do
-  todosMVar <- newMVar []
+  todos <- loadFromStorage
+  todosMVar <- newMVar todos
   renderApp todosMVar
   setupEvents todosMVar
