@@ -35,7 +35,7 @@ A recently built app will be available on the branch `gh-pages`.  To run the
 app, spin up an HTTP server at any port and visit `http://localhost:port/`.
 
 To make changes you'll need to have haste-compiler installed (`hastec` available
-in your PATH). To build run: `make`
+in your PATH). To build run: `bower install` and then `make`
 
 > Currently, there are a couple of patches that I need which are not merged
 > yet. So, it will only function correctly with
