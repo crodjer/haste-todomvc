@@ -18,9 +18,9 @@ mkCheckedProp False = ""
 -- | Set contents for a Todo Elem based on the Todo instance.
 setElTodo :: Todo -> Elem -> CIO Elem
 setElTodo todo li = do
-  withQuerySelectorElem li "label" setLabel
-  withQuerySelectorElem li ".toggle" setChecked
-  withQuerySelectorElem li ".edit" setEditValue
+  mapQS_ li "label" setLabel
+  mapQS_ li ".toggle" setChecked
+  mapQS_ li ".edit" setEditValue
   setClass li "completed" completed'
   return li
   where
@@ -36,10 +36,10 @@ newTodoEl tmv todo = do
   wrapperEl <- newElem "div"
   template <- todoTemplate
   setProp wrapperEl "innerHTML" (template)
-  li <- withQuerySelectorElem wrapperEl "li" (setElTodo todo)
+  li <- mapQS wrapperEl "li" (setElTodo todo) >>= return . (!!0)
   _  <- onEvent li OnDblClick (handleDoubleClick li)
-  _  <- withQuerySelectorElem li ".edit" (registerUpdate li)
-  _  <- withQuerySelectorElem li ".toggle" toggleDone
+  mapQS_ li ".edit" (registerUpdate li)
+  mapQS_ li ".toggle" toggleDone
   return li
 
   where
@@ -51,12 +51,12 @@ newTodoEl tmv todo = do
       task' <- getProp el "value"
       let updater = updateTodo todo (mkTaskUpdater task')
       updater `fmap` takeMVar tmv >>= storeTodos tmv
-      withQuerySelectorElem li "label" (\l -> setProp l "innerHTML" $ task')
+      mapQS_ li "label" (\l -> setProp l "innerHTML" $ task')
       setClass li "editing" False
 
     handleDoubleClick li _ _ = do
       setClass li "editing" True
-      withQuerySelectorElem li ".edit" focus
+      mapQS_ li ".edit" focus
 
     handleEnterUpdate li el 13 = doTaskUpdate li el
     handleEnterUpdate _ _ _ = return ()
@@ -68,7 +68,7 @@ newTodoEl tmv todo = do
 -- | Render the actual todo list.
 renderTodoList :: MVar TodoList -> TodoList -> Elem -> CIO ()
 renderTodoList tmv rTodo ul = do
-  _ <- withQuerySelectorElems ul "li" $ mapM $ (flip removeChild) ul
+  mapQS_ ul "li" $ (flip removeChild) ul
   _ <- mapM addTask rTodo
   return ()
 
@@ -80,7 +80,7 @@ renderTodoList tmv rTodo ul = do
 -- | Render and properly highlight App filters based on hash
 renderFilters :: String -> CIO ()
 renderFilters hash = do
-  _ <- withQuerySelectorElems document "#filters li a" (mapM setHighlight)
+  mapQS_ document "#filters li a" setHighlight
   return ()
 
   where
@@ -100,8 +100,8 @@ renderApp tmv = do
   renderFilters hash
 
   withElems ["main", "footer"] (mapM_  (setHidden $ todos == []))
-  withQuerySelectorElem document "#todo-count" (setActiveCount $ length active)
-  withQuerySelectorElem document "#clear-completed" (resetClearCompleted $ length done)
+  mapQS_ document "#todo-count" (setActiveCount $ length active)
+  mapQS_ document "#clear-completed" (resetClearCompleted $ length done)
   withElem "todo-list" (renderTodoList tmv $ currentTodos todos hash)
   withElem "toggle-all" $ setToggleAllState (active == [])
   return ()
