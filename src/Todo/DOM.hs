@@ -38,6 +38,7 @@ newTodoEl tmv todo = do
   setProp wrapperEl "innerHTML" (template)
   li <- mapQS wrapperEl "li" (setElTodo todo) >>= return . (!!0)
   _  <- onEvent li OnDblClick (handleDoubleClick li)
+  mapQS_ li ".destroy" destroyEl
   mapQS_ li ".edit" (registerUpdate li)
   mapQS_ li ".toggle" toggleDone
   return li
@@ -46,6 +47,7 @@ newTodoEl tmv todo = do
     registerUpdate li el = onEvent el OnKeyUp (handleEnterUpdate li el)
                            >> onEvent el OnBlur (doTaskUpdate li el)
     toggleDone el = onEvent el OnClick handleToggleDone
+    destroyEl el = onEvent el OnClick handleDestroy
 
     doTaskUpdate li el = concurrent $ do
       task' <- getProp el "value"
@@ -63,6 +65,10 @@ newTodoEl tmv todo = do
 
     handleToggleDone _ _ = concurrent $ do
       updateTodo todo toggleCompleted `fmap` takeMVar tmv >>= storeTodos tmv
+      renderApp tmv
+
+    handleDestroy _ _ = concurrent $ do
+      removeTodo todo `fmap` takeMVar tmv >>= storeTodos tmv
       renderApp tmv
 
 -- | Render the actual todo list.
